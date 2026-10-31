@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auditoria SGSI ISO/IEC 27001:2022 - AF Datalink</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for Visual Dashboard Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom styling & fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .tab-btn.active {
+            border-bottom-color: #2563eb;
+            color: #2563eb;
+            font-weight: 600;
+        }
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            .page-break { page-break-before: always; }
+            body { background: white; color: black; font-size: 12pt; }
+            .shadow-sm, .shadow-md, .shadow-lg { box-shadow: none !important; }
+            .border { border-color: #cbd5e1 !important; }
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col text-slate-800">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-slate-900 text-white sticky top-0 z-50 shadow-md no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-blue-600 p-2 rounded-lg font-bold text-lg text-white">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-tight">AF DATALINK — SGSI Audit</h1>
+                        <p class="text-xs text-slate-400">ABNT NBR ISO/IEC 27001:2022 • Plano PA101</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-3">
+                    <button onclick="saveToLocalStorage()" class="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-md border border-slate-700 transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        <span>Salvar</span>
+                    </button>
+                    <button onclick="exportAuditData()" class="px-3 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md transition flex items-center space-x-1.5 shadow-sm">
+                        <i class="fa-solid fa-download"></i>
+                        <span>Exportar JSON</span>
+                    </button>
+                    <button onclick="triggerImportJSON()" class="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-md border border-slate-700 transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-upload"></i>
+                        <span>Importar</span>
+                    </button>
+                    <input type="file" id="jsonInput" class="hidden" accept=".json" onchange="importAuditData(event)">
+                    
+                    <button onclick="window.print()" class="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition flex items-center space-x-1.5 shadow-sm">
+                        <i class="fa-solid fa-print"></i>
+                        <span>Imprimir / PDF</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Navigation Tabs -->
+        <div class="bg-slate-800 border-t border-slate-700">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <nav class="flex space-x-8 overflow-x-auto text-sm" id="navTabs">
+                    <button onclick="switchTab('tab-dashboard')" id="btn-tab-dashboard" class="tab-btn py-3 px-1 text-slate-300 hover:text-white border-b-2 border-transparent whitespace-nowrap active flex items-center space-x-2">
+                        <i class="fa-solid fa-chart-pie text-xs"></i>
+                        <span>Dashboard & Visão Geral</span>
+                    </button>
+                    <button onclick="switchTab('tab-identificacao')" id="btn-tab-identificacao" class="tab-btn py-3 px-1 text-slate-300 hover:text-white border-b-2 border-transparent whitespace-nowrap flex items-center space-x-2">
+                        <i class="fa-solid fa-id-card text-xs"></i>
+                        <span>1. Identificação</span>
+                    </button>
+                    <button onclick="switchTab('tab-requisitos')" id="btn-tab-requisitos" class="tab-btn py-3 px-1 text-slate-300 hover:text-white border-b-2 border-transparent whitespace-nowrap flex items-center space-x-2">
+                        <i class="fa-solid fa-list-check text-xs"></i>
+                        <span>4. Seções 4-10 (Requisitos)</span>
+                        <span id="badge-req" class="ml-1.5 bg-blue-500/20 text-blue-300 text-xs px-2 py-0.5 rounded-full font-mono">0/30</span>
+                    </button>
+                    <button onclick="switchTab('tab-anexoa')" id="btn-tab-anexoa" class="tab-btn py-3 px-1 text-slate-300 hover:text-white border-b-2 border-transparent whitespace-nowrap flex items-center space-x-2">
+                        <i class="fa-solid fa-lock text-xs"></i>
+                        <span>5. Anexo A (Controles)</span>
+                        <span id="badge-anexoa" class="ml-1.5 bg-indigo-500/20 text-indigo-300 text-xs px-2 py-0.5 rounded-full font-mono">0/93</span>
+                    </button>
+                    <button onclick="switchTab('tab-rncs')" id="btn-tab-rncs" class="tab-btn py-3 px-1 text-slate-300 hover:text-white border-b-2 border-transparent whitespace-nowrap flex items-center space-x-2">
+                        <i class="fa-solid fa-triangle-exclamation text-xs"></i>
+                        <span>Gestão de RNCs</span>
+                        <span id="badge-rncs" class="ml-1.5 bg-rose-500/20 text-rose-300 text-xs px-2 py-0.5 rounded-full font-mono">0</span>
+                    </button>
+                    <button onclick="switchTab('tab-relatorio')" id="btn-tab-relatorio" class="tab-btn py-3 px-1 text-slate-300 hover:text-white border-b-2 border-transparent whitespace-nowrap flex items-center space-x-2">
+                        <i class="fa-solid fa-file-contract text-xs"></i>
+                        <span>Relatório & Encerramento</span>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Body -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+
+        <!-- TAB 1: DASHBOARD -->
+        <section id="tab-dashboard" class="tab-content space-y-6">
+            <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-900 rounded-xl p-6 text-white shadow-lg">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <span class="inline-block px-3 py-1 bg-blue-500/20 border border-blue-400/30 text-blue-300 rounded-full text-xs font-semibold tracking-wide uppercase mb-2">
+                            Plano de Auditoria PA101
+                        </span>
+                        <h2 class="text-2xl font-bold tracking-tight">Auditoria Interna do SGSI</h2>
+                        <p class="text-slate-300 text-sm mt-1 max-w-2xl">
+                            Acompanhamento de conformidade com a ABNT NBR ISO/IEC 27001:2022 para a <strong>AF Datalink</strong>.
+                        </p>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur border border-white/10 p-4 rounded-xl text-center min-w-[160px]">
+                        <span class="text-xs uppercase text-slate-300 tracking-wider font-semibold block">Progresso Geral</span>
+                        <span id="dash-total-progress" class="text-3xl font-extrabold text-blue-400">0%</span>
+                        <span id="dash-total-counts" class="text-xs text-slate-300 block mt-0.5">0 de 123 avaliados</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KPI Cards Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-4">
+                    <div class="p-3 bg-emerald-100 text-emerald-600 rounded-lg">
+                        <i class="fa-solid fa-circle-check text-2xl"></i>
+                    </div>
+                    <div>
+                        <span class="text-2xl font-bold text-slate-900 block" id="kpi-c">0</span>
+                        <span class="text-xs font-medium text-slate-500 uppercase tracking-wider">Conformes (C)</span>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-4">
+                    <div class="p-3 bg-rose-100 text-rose-600 rounded-lg">
+                        <i class="fa-solid fa-circle-xmark text-2xl"></i>
+                    </div>
+                    <div>
+                        <span class="text-2xl font-bold text-slate-900 block" id="kpi-nc">0</span>
+                        <span class="text-xs font-medium text-slate-500 uppercase tracking-wider">Não Conformes (NC)</span>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-4">
+                    <div class="p-3 bg-amber-100 text-amber-600 rounded-lg">
+                        <i class="fa-solid fa-lightbulb text-2xl"></i>
+                    </div>
+                    <div>
+                        <span class="text-2xl font-bold text-slate-900 block" id="kpi-om">0</span>
+                        <span class="text-xs font-medium text-slate-500 uppercase tracking-wider">Op. Melhoria (OM)</span>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-4">
+                    <div class="p-3 bg-slate-100 text-slate-600 rounded-lg">
+                        <i class="fa-solid fa-ban text-2xl"></i>
+                    </div>
+                    <div>
+                        <span class="text-2xl font-bold text-slate-900 block" id="kpi-na">0</span>
+                        <span class="text-xs font-medium text-slate-500 uppercase tracking-wider">Não Aplicáveis (NA)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Requisitos Cláusulas 4 a 10 Chart -->
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                        <h3 class="font-bold text-slate-800 text-base flex items-center space-x-2">
+                            <i class="fa-solid fa-diagram-project text-blue-600"></i>
+                            <span>Requisitos Normativos (Seções 4–10)</span>
+                        </h3>
+                        <span id="req-progress-badge" class="text-xs bg-blue-50 text-blue-700 font-semibold px-2.5 py-1 rounded-full border border-blue-200">
+                            0/30 Concluídos
+                        </span>
+                    </div>
+                    <div class="h-64 relative flex items-center justify-center">
+                        <canvas id="chartRequisitos"></canvas>
+                    </div>
+                </div>
+
+                <!-- Anexo A Controles Chart -->
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                        <h3 class="font-bold text-slate-800 text-base flex items-center space-x-2">
+                            <i class="fa-solid fa-shield-cat text-indigo-600"></i>
+                            <span>Controles de Segurança (Anexo A)</span>
+                        </h3>
+                        <span id="anexoa-progress-badge" class="text-xs bg-indigo-50 text-indigo-700 font-semibold px-2.5 py-1 rounded-full border border-indigo-200">
+                            0/93 Concluídos
+                        </span>
+                    </div>
+                    <div class="h-64 relative flex items-center justify-center">
+                        <canvas id="chartAnexoA"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Legenda das Siglas do Plano -->
+            <div class="bg-slate-100 p-4 rounded-xl border border-slate-200 text-xs text-slate-600 space-y-2">
+                <span class="font-bold text-slate-700 text-sm block">Legenda de Conformidade (PA101 Seção 2):</span>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div class="bg-white p-2.5 rounded border border-slate-200"><strong class="text-emerald-700">C (Conforme):</strong> Requisito atendido, evidência objetiva verificada.</div>
+                    <div class="bg-white p-2.5 rounded border border-slate-200"><strong class="text-rose-700">NC (Não Conforme):</strong> Requisito não atendido/insuficiente. Requer RNC.</div>
+                    <div class="bg-white p-2.5 rounded border border-slate-200"><strong class="text-amber-700">OM (Oportunidade de Melhoria):</strong> Atende ao requisito, porém passível de aprimoramento.</div>
+                    <div class="bg-white p-2.5 rounded border border-slate-200"><strong class="text-slate-700">NA (Não Aplicável):</strong> Exclusão justificada no SoA (Somente Anexo A).</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: IDENTIFICAÇÃO DA AUDITORIA -->
+        <section id="tab-identificacao" class="tab-content hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
+                <div class="border-b border-slate-200 pb-4 flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900">1. Identificação da Auditoria</h2>
+                        <p class="text-xs text-slate-500 mt-0.5">Definições gerais do plano de auditoria interna SGSI</p>
+                    </div>
+                    <span class="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">Doc Controlled v1.0</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Organização Auditada</label>
+                        <input type="text" id="ident-organizacao" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg bg-slate-50 font-medium text-slate-800 focus:ring-2 focus:ring-blue-500 focus:bg-white transition" value="AF Datalink">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Norma de Referência</label>
+                        <input type="text" id="ident-norma" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg bg-slate-50 font-medium text-slate-800 focus:ring-2 focus:ring-blue-500 focus:bg-white transition" value="ABNT NBR ISO/IEC 27001:2022 – Sistemas de Gestão da Segurança da Informação">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Tipo de Auditoria</label>
+                        <select id="ident-tipo" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg bg-slate-50 font-medium text-slate-800 focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+                            <option value="1a_parte" selected>Auditoria Interna (1ª Parte)</option>
+                            <option value="2a_parte">Auditoria de Fornecedor (2ª Parte)</option>
+                            <option value="3a_parte">Auditoria de Certificação (3ª Parte)</option>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Data Inicial</label>
+                            <input type="date" id="ident-data-inicio" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg bg-slate-50 font-medium text-slate-800 focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Data Término</label>
+                            <input type="date" id="ident-data-fim" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg bg-slate-50 font-medium text-slate-800 focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Escopo da Auditoria</label>
+                        <textarea id="ident-escopo" rows="3" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg bg-slate-50 font-medium text-slate-800 focus:ring-2 focus:ring-blue-500 focus:bg-white transition" placeholder="Descreva a abrangência do SGSI, locais, departamentos e infraestrutura auditada..."></textarea>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Objetivo da Auditoria</label>
+                        <textarea id="ident-objetivo" rows="2" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg bg-slate-50 font-medium text-slate-800 focus:ring-2 focus:ring-blue-500 focus:bg-white transition">Verificar a conformidade do SGSI da AF Datalink com os requisitos das Seções 4 a 10 e com os controles do Anexo A da ABNT NBR ISO/IEC 27001:2022, e avaliar sua implementação e eficácia.</textarea>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Critérios de Auditoria</label>
+                        <textarea id="ident-criterios" rows="2" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg bg-slate-50 font-medium text-slate-800 focus:ring-2 focus:ring-blue-500 focus:bg-white transition">ABNT NBR ISO/IEC 27001:2022; política, procedimentos e demais documentos do SGSI da AF Datalink; requisitos legais, regulamentares e contratuais aplicáveis.</textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Auditor Líder</label>
+                        <input type="text" id="ident-auditor-lider" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg bg-slate-50 font-medium text-slate-800 focus:ring-2 focus:ring-blue-500 focus:bg-white transition" placeholder="Nome do Auditor Líder">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Equipe Auditora</label>
+                        <input type="text" id="ident-equipe" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg bg-slate-50 font-medium text-slate-800 focus:ring-2 focus:ring-blue-500 focus:bg-white transition" placeholder="Membros da equipe auditora">
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Auditado(s) / Processo(s)</label>
+                        <input type="text" id="ident-auditados" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg bg-slate-50 font-medium text-slate-800 focus:ring-2 focus:ring-blue-500 focus:bg-white transition" placeholder="Nomes dos gestores, equipes e processos auditados">
+                    </div>
+                </div>
+
+                <div class="flex justify-end pt-4 border-t border-slate-200">
+                    <button onclick="saveToLocalStorage(); switchTab('tab-requisitos');" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg shadow-sm transition flex items-center space-x-2">
+                        <span>Avançar para Checklist de Requisitos</span>
+                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: CHECKLIST REQUISITOS (SEÇÕES 4 A 10) -->
+        <section id="tab-requisitos" class="tab-content hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900">4. Checklist — Requisitos do SGSI (Seções 4 a 10)</h2>
+                        <p class="text-xs text-slate-500 mt-0.5">30 Requisitos das cláusulas normativas obrigatórias da ABNT NBR ISO/IEC 27001:2022</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <input type="text" id="search-req" oninput="filterReqItems()" placeholder="Buscar requisito..." class="text-xs p-2 border border-slate-300 rounded-lg w-48 focus:ring-2 focus:ring-blue-500">
+                        <select id="filter-req-status" onchange="filterReqItems()" class="text-xs p-2 border border-slate-300 rounded-lg bg-slate-50">
+                            <option value="ALL">Todos os Status</option>
+                            <option value="PENDING">Pendentes</option>
+                            <option value="C">C (Conforme)</option>
+                            <option value="NC">NC (Não Conforme)</option>
+                            <option value="OM">OM (Op. Melhoria)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Table Container -->
+                <div class="overflow-x-auto rounded-lg border border-slate-200">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-100 border-b border-slate-200 text-slate-700 font-semibold uppercase tracking-wider">
+                                <th class="p-3 w-12 text-center">Nº</th>
+                                <th class="p-3 w-16 text-center">Item</th>
+                                <th class="p-3 w-1/3">Requisito da Norma</th>
+                                <th class="p-3 w-1/4">Evidências Apresentadas</th>
+                                <th class="p-3 w-1/4">Observações do Auditor</th>
+                                <th class="p-3 w-28 text-center">Conformidade</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-requisitos" class="divide-y divide-slate-200 bg-white">
+                            <!-- Injected dynamically by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: CHECKLIST CONTROLES ANEXO A -->
+        <section id="tab-anexoa" class="tab-content hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900">5. Checklist — Controles de Segurança (Anexo A)</h2>
+                        <p class="text-xs text-slate-500 mt-0.5">93 Controles de segurança divididos em 4 temas (Organizacionais, Pessoas, Físicos e Tecnológicos)</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <select id="filter-anexoa-cat" onchange="filterAnexoAItems()" class="text-xs p-2 border border-slate-300 rounded-lg bg-slate-50">
+                            <option value="ALL">Todas as Categorias (A.5 a A.8)</option>
+                            <option value="A.5">A.5 — Controles Organizacionais (37)</option>
+                            <option value="A.6">A.6 — Controles de Pessoas (8)</option>
+                            <option value="A.7">A.7 — Controles Físicos (14)</option>
+                            <option value="A.8">A.8 — Controles Tecnológicos (34)</option>
+                        </select>
+                        <select id="filter-anexoa-status" onchange="filterAnexoAItems()" class="text-xs p-2 border border-slate-300 rounded-lg bg-slate-50">
+                            <option value="ALL">Todos os Status</option>
+                            <option value="PENDING">Pendentes</option>
+                            <option value="C">C (Conforme)</option>
+                            <option value="NC">NC (Não Conforme)</option>
+                            <option value="OM">OM (Op. Melhoria)</option>
+                            <option value="NA">NA (Não Aplicável)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Table Container -->
+                <div class="overflow-x-auto rounded-lg border border-slate-200">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-100 border-b border-slate-200 text-slate-700 font-semibold uppercase tracking-wider">
+                                <th class="p-3 w-12 text-center">Nº</th>
+                                <th class="p-3 w-16 text-center">Item</th>
+                                <th class="p-3 w-1/3">Descrição do Controle</th>
+                                <th class="p-3 w-1/4">Evidências / Documentos</th>
+                                <th class="p-3 w-1/4">Observações / Justificativa SoA</th>
+                                <th class="p-3 w-28 text-center">Conformidade</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-anexoa" class="divide-y divide-slate-200 bg-white">
+                            <!-- Injected dynamically by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 5: GESTÃO DE RNCs -->
+        <section id="tab-rncs" class="tab-content hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
+                <div class="flex items-center justify-between border-b border-slate-200 pb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900 flex items-center space-x-2">
+                            <i class="fa-solid fa-triangle-exclamation text-rose-600"></i>
+                            <span>Relatórios de Não Conformidade (RNC)</span>
+                        </h2>
+                        <p class="text-xs text-slate-500 mt-0.5">Formalização e acompanhamento de achados de não conformidade (Conforme Seção 10.2 da norma)</p>
+                    </div>
+                    <button onclick="openNewRncModal()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-lg transition flex items-center space-x-1.5 shadow-sm">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Nova RNC</span>
+                    </button>
+                </div>
+
+                <div id="rnc-list-container" class="space-y-4">
+                    <!-- RNC Cards inserted dynamically -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 6: RELATÓRIO FINAL E ENCERRAMENTO -->
+        <section id="tab-relatorio" class="tab-content hidden space-y-6">
+            <div class="bg-white p-8 rounded-xl border border-slate-200 shadow-sm space-y-8">
+                <!-- Header do Relatório Impresso -->
+                <div class="text-center border-b border-slate-200 pb-6 space-y-2">
+                    <div class="inline-block bg-slate-900 text-white text-xs font-bold px-3 py-1 rounded">
+                        DOCUMENTO CONTROLADO — ISO/IEC 27001:2022
+                    </div>
+                    <h2 class="text-2xl font-extrabold text-slate-900">RELATÓRIO DE AUDITORIA INTERNA DO SGSI</h2>
+                    <h3 class="text-lg font-semibold text-blue-700">AF DATALINK</h3>
+                    <p class="text-xs text-slate-500" id="rpt-date-str">Data da Auditoria: Em preenchimento</p>
+                </div>
+
+                <!-- Resumo Quantitativo Seção 6 -->
+                <div class="space-y-3">
+                    <h4 class="font-bold text-slate-800 text-sm border-b border-slate-200 pb-1 uppercase tracking-wider">
+                        6. Resumo dos Resultados da Auditoria
+                    </h4>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2">
+                            <span class="font-semibold text-xs text-slate-700 block border-b border-slate-200 pb-1">
+                                Requisitos Normativos (Seções 4 a 10)
+                            </span>
+                            <div class="grid grid-cols-2 gap-2 text-xs">
+                                <div>Avaliados: <strong id="rpt-req-eval">0 / 30</strong></div>
+                                <div>Conformes: <strong class="text-emerald-700" id="rpt-req-c">0</strong></div>
+                                <div>Não Conformes: <strong class="text-rose-700" id="rpt-req-nc">0</strong></div>
+                                <div>Op. Melhoria: <strong class="text-amber-700" id="rpt-req-om">0</strong></div>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2">
+                            <span class="font-semibold text-xs text-slate-700 block border-b border-slate-200 pb-1">
+                                Controles de Segurança (Anexo A)
+                            </span>
+                            <div class="grid grid-cols-2 gap-2 text-xs">
+                                <div>Avaliados: <strong id="rpt-anexoa-eval">0 / 93</strong></div>
+                                <div>Conformes: <strong class="text-emerald-700" id="rpt-anexoa-c">0</strong></div>
+                                <div>Não Conformes: <strong class="text-rose-700" id="rpt-anexoa-nc">0</strong></div>
+                                <div>Não Aplicáveis: <strong class="text-slate-700" id="rpt-anexoa-na">0</strong></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Parecer Qualitativo -->
+                <div class="space-y-4">
+                    <div>
+                        <label class="block font-bold text-slate-800 text-xs uppercase tracking-wider mb-1">
+                            Principais pontos fortes identificados:
+                        </label>
+                        <textarea id="rpt-pontos-fortes" rows="3" class="w-full text-xs p-3 border border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-blue-500" placeholder="Mencione os destaques, boas práticas e maturidade observada nos processos..."></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block font-bold text-slate-800 text-xs uppercase tracking-wider mb-1">
+                            Principais não conformidades / riscos identificados:
+                        </label>
+                        <textarea id="rpt-principais-riscos" rows="3" class="w-full text-xs p-3 border border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-blue-500" placeholder="Resumo dos achados mais críticos e vulnerabilidades encontradas durante a auditoria..."></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block font-bold text-slate-800 text-xs uppercase tracking-wider mb-1">
+                            Recomendações gerais:
+                        </label>
+                        <textarea id="rpt-recomendacoes" rows="3" class="w-full text-xs p-3 border border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-blue-500" placeholder="Recomendações e orientações da equipe auditora para a melhoria contínua do SGSI..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Encerramento e Assinaturas (Seção 7) -->
+                <div class="space-y-6 pt-6 border-t border-slate-200">
+                    <h4 class="font-bold text-slate-800 text-sm border-b border-slate-200 pb-1 uppercase tracking-wider">
+                        7. Encerramento e Assinaturas
+                    </h4>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6">
+                        <!-- Auditor -->
+                        <div class="space-y-4 text-center border p-4 rounded-lg border-slate-200 bg-slate-50">
+                            <span class="font-bold text-xs uppercase text-slate-600 block">Equipe Auditora</span>
+                            <div class="border-b border-slate-400 h-12 flex items-end justify-center pb-1">
+                                <span id="sign-auditor-name" class="text-xs font-semibold text-slate-800">________________________________________</span>
+                            </div>
+                            <div class="text-xs text-slate-500 space-y-1">
+                                <p><strong>Auditor Líder</strong></p>
+                                <p>Data: <span id="sign-auditor-date">___/___/______</span></p>
+                            </div>
+                        </div>
+
+                        <!-- Representante AF Datalink -->
+                        <div class="space-y-4 text-center border p-4 rounded-lg border-slate-200 bg-slate-50">
+                            <span class="font-bold text-xs uppercase text-slate-600 block">Organização Auditada</span>
+                            <div class="border-b border-slate-400 h-12 flex items-end justify-center pb-1">
+                                <span id="sign-auditado-name" class="text-xs font-semibold text-slate-800">________________________________________</span>
+                            </div>
+                            <div class="text-xs text-slate-500 space-y-1">
+                                <p><strong>Representante da AF Datalink</strong></p>
+                                <p>Data: <span id="sign-auditado-date">___/___/______</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL FOR NEW / EDIT RNC -->
+    <div id="modal-rnc" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6 space-y-4 border border-slate-200">
+            <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+                <h3 class="font-bold text-base text-slate-900 flex items-center space-x-2">
+                    <i class="fa-solid fa-triangle-exclamation text-rose-600"></i>
+                    <span id="modal-rnc-title">Registrar Não Conformidade (RNC)</span>
+                </h3>
+                <button onclick="closeRncModal()" class="text-slate-400 hover:text-slate-600 text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3 text-xs">
+                <input type="hidden" id="rnc-id">
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">RNC Nº</label>
+                        <input type="text" id="rnc-num" class="w-full p-2 border rounded font-mono font-bold bg-slate-50" readonly>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Ref. Item Norma</label>
+                        <input type="text" id="rnc-item-ref" class="w-full p-2 border rounded" placeholder="Ex: 5.2 ou A.8.12">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Data Registro</label>
+                        <input type="date" id="rnc-date" class="w-full p-2 border rounded">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Descrição do Achado / Não Conformidade</label>
+                    <textarea id="rnc-desc" rows="3" class="w-full p-2 border rounded" placeholder="Descreva detalhadamente o descumprimento observado..."></textarea>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Evidências Objetivas</label>
+                    <textarea id="rnc-evid" rows="2" class="w-full p-2 border rounded" placeholder="Especifique logs, telas, documentos ou entrevistas que comprovam a NC..."></textarea>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Causa Raiz (Ação Corretiva - 10.2)</label>
+                    <textarea id="rnc-causa" rows="2" class="w-full p-2 border rounded" placeholder="Causa identificada após análise do auditado..."></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Responsável pela Ação</label>
+                        <input type="text" id="rnc-resp" class="w-full p-2 border rounded" placeholder="Nome / Cargo">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Prazo Limite Correção</label>
+                        <input type="date" id="rnc-prazo" class="w-full p-2 border rounded">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-2 pt-3 border-t border-slate-200">
+                <button onclick="closeRncModal()" class="px-4 py-2 border border-slate-300 text-slate-700 text-xs rounded hover:bg-slate-50">Cancelar</button>
+                <button onclick="saveRnc()" class="px-4 py-2 bg-rose-600 text-white text-xs font-semibold rounded hover:bg-rose-700">Salvar RNC</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- APPLICATION JAVASCRIPT LOGIC -->
+    <script>
+        // DATA STRUCTURES
+        // Requisitos normativos (Seções 4 a 10) - 30 itens
+        const REQUISITOS_DATA = [
+            { id: 1, item: "4.1", sec: "4. Contexto da organização", req: "A organização determina as questões internas e externas relevantes para seu propósito que afetam sua capacidade de alcançar os resultados pretendidos do SGSI." },
+            { id: 2, item: "4.2", sec: "4. Contexto da organização", req: "A organização determina as partes interessadas relevantes para o SGSI, seus requisitos e quais serão endereçados pelo sistema de gestão." },
+            { id: 3, item: "4.3", sec: "4. Contexto da organização", req: "A organização determina os limites e a aplicabilidade do SGSI para estabelecer seu escopo, considerando 4.1, 4.2 e interfaces. Escopo disponível como informação documentada." },
+            { id: 4, item: "4.4", sec: "4. Contexto da organização", req: "A organização estabelece, implementa, mantém e melhora continuamente um SGSI, incluindo os processos necessários e suas interações." },
+            
+            { id: 5, item: "5.1", sec: "5. Liderança", req: "A Alta Direção demonstra liderança e comprometimento com o SGSI (política, objetivos, recursos, comunicação, engajamento e melhoria contínua)." },
+            { id: 6, item: "5.2", sec: "5. Liderança", req: "A Alta Direção estabelece uma política de segurança da informação apropriada, documentada, comunicada e disponível às partes interessadas." },
+            { id: 7, item: "5.3", sec: "5. Liderança", req: "A Alta Direção assegura que responsabilidades e autoridades para papéis relevantes de segurança da informação sejam atribuídas e comunicadas." },
+            
+            { id: 8, item: "6.1.1", sec: "6. Planejamento", req: "Ao planejar o SGSI, a organização determina os riscos e oportunidades para assegurar resultados, prevenir efeitos indesejados e alcançar melhoria contínua." },
+            { id: 9, item: "6.1.2", sec: "6. Planejamento", req: "A organização estabelece e aplica um processo de avaliação de riscos de SI com critérios de aceitação, identificação de proprietários, análise e priorização." },
+            { id: 10, item: "6.1.3", sec: "6. Planejamento", req: "A organização estabelece e aplica processo de tratamento de riscos, elaborando a Declaração de Aplicabilidade (SoA) e obtendo aprovação dos proprietários." },
+            { id: 11, item: "6.2", sec: "6. Planejamento", req: "A organização estabelece objetivos de segurança da informação mensuráveis, monitorados, comunicados e atualizados nas funções relevantes." },
+            { id: 12, item: "6.3", sec: "6. Planejamento", req: "Quando a organização determina a necessidade de mudanças no SGSI, essas mudanças são conduzidas de forma planejada." },
+            
+            { id: 13, item: "7.1", sec: "7. Apoio", req: "A organização determina e provê os recursos necessários para estabelecer, implementar, manter e melhorar continuamente o SGSI." },
+            { id: 14, item: "7.2", sec: "7. Apoio", req: "A organização determina a competência necessária das pessoas, assegura competência (educação, treinamento, experiência) e retém evidências." },
+            { id: 15, item: "7.3", sec: "7. Apoio", req: "As pessoas que realizam trabalhos estão cientes da política de SI, sua contribuição e das implicações do não atendimento aos requisitos." },
+            { id: 16, item: "7.4", sec: "7. Apoio", req: "A organização determina a necessidade de comunicações internas e externas relevantes para o SGSI (o que, quando, com quem e como)." },
+            { id: 17, item: "7.5.1", sec: "7. Apoio", req: "O SGSI inclui a informação documentada requerida pela norma e a determinada pela organização como necessária." },
+            { id: 18, item: "7.5.2", sec: "7. Apoio", req: "Ao criar e atualizar informação documentada, a organização assegura identificação, formato, meio e análise crítica/aprovação." },
+            { id: 19, item: "7.5.3", sec: "7. Apoio", req: "A informação documentada é controlada quanto à disponibilidade, proteção, distribuição, armazenamento, controle de mudanças e retenção." },
+            
+            { id: 20, item: "8.1", sec: "8. Operação", req: "A organização planeja, implementa e controla os processos necessários para atender aos requisitos e ações da Seção 6." },
+            { id: 21, item: "8.2", sec: "8. Operação", req: "A organização realiza avaliações de riscos de SI a intervalos planejados ou quando ocorrem mudanças significativas." },
+            { id: 22, item: "8.3", sec: "8. Operação", req: "A organização implementa o plano de tratamento de riscos de segurança da informação e retém informação documentada dos resultados." },
+            
+            { id: 23, item: "9.1", sec: "9. Avaliação de Desempenho", req: "A organização determina o que precisa ser monitorado e medido, métodos, frequência e responsabilidades para avaliar a eficácia do SGSI." },
+            { id: 24, item: "9.2.1", sec: "9. Avaliação de Desempenho", req: "A organização conduz auditorias internas a intervalos planejados para prover informações sobre a conformidade e implementação do SGSI." },
+            { id: 25, item: "9.2.2", sec: "9. Avaliação de Desempenho", req: "A organização planeja, estabelece, implementa e mantém programa de auditoria interna, assegurando objetividade e imparcialidade dos auditores." },
+            { id: 26, item: "9.3.1", sec: "9. Avaliação de Desempenho", req: "A Alta Direção analisa criticamente o SGSI em intervalos planejados para assegurar sua contínua adequação, pertinência e eficácia." },
+            { id: 27, item: "9.3.2", sec: "9. Avaliação de Desempenho", req: "A análise crítica pela Direção considera entradas como resultados de auditorias, riscos, não conformidades, objetivos e feedback de partes interessadas." },
+            { id: 28, item: "9.3.3", sec: "9. Avaliação de Desempenho", req: "Os resultados da análise crítica pela Direção incluem decisões sobre melhoria contínua e necessidades de mudanças no SGSI." },
+            
+            { id: 29, item: "10.1", sec: "10. Melhoria", req: "A organização melhora continuamente a pertinência, adequação e eficácia do SGSI." },
+            { id: 30, item: "10.2", sec: "10. Melhoria", req: "Quando ocorre uma não conformidade, a organização reage, avalia causas, implementa ações corretivas, analisa eficácia e retém evidências." }
+        ];
+
+        // Controles de Segurança Anexo A - 93 controles
+        const ANEXOA_DATA = [
+            // A.5 Controles organizacionais (37)
+            { id: 31, item: "5.1", cat: "A.5", name: "Políticas de segurança da informação", desc: "Política de SI e políticas específicas por tema definidas, aprovadas, comunicadas e analisadas criticamente." },
+            { id: 32, item: "5.2", cat: "A.5", name: "Papéis e responsabilidades pela SI", desc: "Papéis e responsabilidades pela segurança da informação definidos e alocados." },
+            { id: 33, item: "5.3", cat: "A.5", name: "Segregação de funções", desc: "Funções e áreas de responsabilidade conflitantes são segregadas." },
+            { id: 34, item: "5.4", cat: "A.5", name: "Responsabilidades da direção", desc: "A direção requer que todo o pessoal aplique a SI conforme as políticas e procedimentos estabelecidos." },
+            { id: 35, item: "5.5", cat: "A.5", name: "Contato com autoridades", desc: "Contato com autoridades relevantes estabelecido e mantido." },
+            { id: 36, item: "5.6", cat: "A.5", name: "Contato com grupos de interesse especial", desc: "Contato com grupos de interesse especial ou fóruns de especialistas mantido." },
+            { id: 37, item: "5.7", cat: "A.5", name: "Inteligência de ameaças", desc: "Informações relacionadas a ameaças à SI coletadas e analisadas para produzir inteligência." },
+            { id: 38, item: "5.8", cat: "A.5", name: "SI no gerenciamento de projetos", desc: "Segurança da informação integrada ao gerenciamento de projetos." },
+            { id: 39, item: "5.9", cat: "A.5", name: "Inventário de informações e outros ativos", desc: "Inventário de informações e ativos associados, incluindo proprietários, desenvolvido e mantido." },
+            { id: 40, item: "5.10", cat: "A.5", name: "Uso aceitável de informações e ativos", desc: "Regras para o uso aceitável e procedimentos para o manuseio de ativos identificados e implementados." },
+            { id: 41, item: "5.11", cat: "A.5", name: "Devolução de ativos", desc: "Pessoal e partes interessadas devolvem todos os ativos na mudança ou encerramento do vínculo." },
+            { id: 42, item: "5.12", cat: "A.5", name: "Classificação das informações", desc: "Informações classificadas de acordo com as necessidades de confidencialidade, integridade e disponibilidade." },
+            { id: 43, item: "5.13", cat: "A.5", name: "Rotulagem de informações", desc: "Procedimentos para rotulagem de informações desenvolvidos conforme esquema de classificação." },
+            { id: 44, item: "5.14", cat: "A.5", name: "Transferência de informações", desc: "Regras, procedimentos ou acordos de transferência implementados para todos os recursos." },
+            { id: 45, item: "5.15", cat: "A.5", name: "Controle de acesso", desc: "Regras para controlar acesso físico e lógico às informações e ativos estabelecidas." },
+            { id: 46, item: "5.16", cat: "A.5", name: "Gestão de identidade", desc: "O ciclo de vida completo das identidades é gerenciado." },
+            { id: 47, item: "5.17", cat: "A.5", name: "Informações de autenticação", desc: "Alocação e gestão de informações de autenticação (ex: senhas) controladas por processo." },
+            { id: 48, item: "5.18", cat: "A.5", name: "Direitos de acesso", desc: "Direitos de acesso provisionados, analisados criticamente, modificados e removidos conforme regras." },
+            { id: 49, item: "5.19", cat: "A.5", name: "SI nas relações com fornecedores", desc: "Processos e procedimentos para gerenciar riscos de SI no uso de produtos/serviços de fornecedores." },
+            { id: 50, item: "5.20", cat: "A.5", name: "Requisitos de SI em contratos com fornecedores", desc: "Requisitos de SI estabelecidos e acordados com cada fornecedor." },
+            { id: 51, item: "5.21", cat: "A.5", name: "SI na cadeia de suprimentos de TIC", desc: "Gerenciamento de riscos de SI associados à cadeia de fornecimento de produtos/serviços de TIC." },
+            { id: 52, item: "5.22", cat: "A.5", name: "Monitoramento e gestão de serviços de fornecedores", desc: "Monitoramento e análise crítica regular da prestação de serviços dos fornecedores." },
+            { id: 53, item: "5.23", cat: "A.5", name: "SI para uso de serviços em nuvem", desc: "Processos de aquisição, uso, gestão e saída de serviços em nuvem estabelecidos." },
+            { id: 54, item: "5.24", cat: "A.5", name: "Planejamento e gestão de incidentes de SI", desc: "Planejamento e preparação para gestão de incidentes de SI com papéis e procedimentos definidos." },
+            { id: 55, item: "5.25", cat: "A.5", name: "Avaliação e decisão sobre eventos de SI", desc: "Avaliação de eventos de SI para categorização como incidentes." },
+            { id: 56, item: "5.26", cat: "A.5", name: "Resposta a incidentes de SI", desc: "Incidentes respondidos conforme procedimentos documentados." },
+            { id: 57, item: "5.27", cat: "A.5", name: "Aprendizado com incidentes de SI", desc: "Conhecimento adquirido com incidentes usado para fortalecer os controles." },
+            { id: 58, item: "5.28", cat: "A.5", name: "Coleta de evidências", desc: "Procedimentos para identificação, coleta e preservação de evidências de incidentes." },
+            { id: 59, item: "5.29", cat: "A.5", name: "SI durante a disrupção", desc: "Planejamento para manutenção de nível apropriado de SI durante disrupções." },
+            { id: 60, item: "5.30", cat: "A.5", name: "Prontidão de TIC para continuidade de negócios", desc: "Prontidão de TIC planejada, mantida e testada com base nos objetivos de continuidade." },
+            { id: 61, item: "5.31", cat: "A.5", name: "Requisitos legais, regulamentares e contratuais", desc: "Requisitos legais e contratuais de SI identificados, documentados e mantidos atualizados." },
+            { id: 62, item: "5.32", cat: "A.5", name: "Direitos de propriedade intelectual", desc: "Procedimentos implementados para proteção dos direitos de propriedade intelectual." },
+            { id: 63, item: "5.33", cat: "A.5", name: "Proteção de registros", desc: "Registros protegidos contra perda, destruição, falsificação e acesso não autorizado." },
+            { id: 64, item: "5.34", cat: "A.5", name: "Privacidade e proteção de dados pessoais", desc: "Atendimento aos requisitos de privacidade e proteção de DP conforme legislação (LGPD)." },
+            { id: 65, item: "5.35", cat: "A.5", name: "Análise crítica independente da SI", desc: "Gestão da SI analisada de forma independente a intervalos planejados." },
+            { id: 66, item: "5.36", cat: "A.5", name: "Compliance com políticas e normas de SI", desc: "Análise regular da conformidade com políticas e normas de SI." },
+            { id: 67, item: "5.37", cat: "A.5", name: "Procedimentos de operação", desc: "Procedimentos de operação dos recursos de TI documentados e disponibilizados." },
+
+            // A.6 Controles de pessoas (8)
+            { id: 68, item: "6.1", cat: "A.6", name: "Seleção de candidatos", desc: "Verificações de antecedentes de candidatos realizadas antes e de modo contínuo." },
+            { id: 69, item: "6.2", cat: "A.6", name: "Termos e condições de contratação", desc: "Contratos declaram responsabilidades do pessoal e da organização para com a SI." },
+            { id: 70, item: "6.3", cat: "A.6", name: "Conscientização, educação e treinamento em SI", desc: "Treinamento e conscientização regular em SI aplicados a todo o pessoal." },
+            { id: 71, item: "6.4", cat: "A.6", name: "Processo disciplinar", desc: "Processo disciplinar formalizado para tratar violações das políticas de SI." },
+            { id: 72, item: "6.5", cat: "A.6", name: "Responsabilidades após o encerramento", desc: "Responsabilidades válidas após término do contrato definidas e comunicadas." },
+            { id: 73, item: "6.6", cat: "A.6", name: "Acordos de confidencialidade (NDA)", desc: "Acordos de confidencialidade identificados, assinados e mantidos." },
+            { id: 74, item: "6.7", cat: "A.6", name: "Trabalho remoto", desc: "Medidas de segurança implementadas para proteger informações em teletrabalho." },
+            { id: 75, item: "6.8", cat: "A.6", name: "Relato de eventos de SI", desc: "Canal disponível para relato ágil de eventos e suspeitas de incidentes." },
+
+            // A.7 Controles físicos (14)
+            { id: 76, item: "7.1", cat: "A.7", name: "Perímetros de segurança física", desc: "Perímetros definidos para proteger áreas com informações sensíveis." },
+            { id: 77, item: "7.2", cat: "A.7", name: "Entrada física", desc: "Áreas seguras protegidas por controles de entrada e acesso autorizados." },
+            { id: 78, item: "7.3", cat: "A.7", name: "Segurança de escritórios e instalações", desc: "Segurança física projetada para escritórios e salas de servidores." },
+            { id: 79, item: "7.4", cat: "A.7", name: "Monitoramento de segurança física", desc: "Instalações monitoradas continuamente contra acessos não autorizados." },
+            { id: 80, item: "7.5", cat: "A.7", name: "Proteção contra ameaças físicas e ambientais", desc: "Proteção contra incêndio, enchentes e desastres naturais implementada." },
+            { id: 81, item: "7.6", cat: "A.7", name: "Trabalho em áreas seguras", desc: "Procedimentos de segurança aplicados ao trabalhar em áreas restritas." },
+            { id: 82, item: "7.7", cat: "A.7", name: "Mesa limpa e tela limpa", desc: "Regras de mesa limpa e bloqueio de tela definidas e aplicadas." },
+            { id: 83, item: "7.8", cat: "A.7", name: "Localização e proteção de equipamentos", desc: "Equipamentos posicionados com segurança para reduzir riscos." },
+            { id: 84, item: "7.9", cat: "A.7", name: "Segurança de ativos fora das instalações", desc: "Ativos fora do ambiente corporativo protegidos contra roubo/perda." },
+            { id: 85, item: "7.10", cat: "A.7", name: "Mídia de armazenamento", desc: "Mídias gerenciadas durante seu ciclo de vida (transporte, guarda, descarte)." },
+            { id: 86, item: "7.11", cat: "A.7", name: "Serviços de infraestrutura", desc: "Proteção contra falhas de energia (Nobreak/Gerador) e climatização." },
+            { id: 87, item: "7.12", cat: "A.7", name: "Segurança do cabeamento", desc: "Cabos de rede e energia protegidos contra interceptação ou danos." },
+            { id: 88, item: "7.13", cat: "A.7", name: "Manutenção de equipamentos", desc: "Manutenção preventiva/corretiva realizada adequadamente." },
+            { id: 89, item: "7.14", cat: "A.7", name: "Descarte seguro ou reutilização de equipamentos", desc: "Sobrescrita/desmagnetização de mídias antes do descarte de hardware." },
+
+            // A.8 Controles tecnológicos (34)
+            { id: 90, item: "8.1", cat: "A.8", name: "Dispositivos endpoint do usuário", desc: "Dispositivos finais (notebooks/smartphones) protegidos com antivírus/criptografia." },
+            { id: 91, item: "8.2", cat: "A.8", name: "Direitos de acessos privileged", desc: "Contas administrativas e de privilégios elevados restritas e auditadas." },
+            { id: 92, item: "8.3", cat: "A.8", name: "Restrição de acesso à informação", desc: "Acesso aos dados restrito pelo princípio do menor privilégio." },
+            { id: 93, item: "8.4", cat: "A.8", name: "Acesso ao código-fonte", desc: "Acesso ao código-fonte e ferramentas de dev restrito e protegido." },
+            { id: 94, item: "8.5", cat: "A.8", name: "Autenticação segura", desc: "MFA e políticas de senhas fortes implementados." },
+            { id: 95, item: "8.6", cat: "A.8", name: "Gestão de capacidade", desc: "Capacidade de processamento/armazenamento monitorada proativamente." },
+            { id: 96, item: "8.7", cat: "A.8", name: "Proteção contra malware", desc: "Antivírus/EDR ativado e atualizado em todos os sistemas." },
+            { id: 97, item: "8.8", cat: "A.8", name: "Gestão de vulnerabilidades técnicas", desc: "Mapeamento e correção regular de vulnerabilidades de software." },
+            { id: 98, item: "8.9", cat: "A.8", name: "Gestão de configuração", desc: "Hardening e padrões de configuração seguros aplicados." },
+            { id: 99, item: "8.10", cat: "A.8", name: "Exclusão de informações", desc: "Descarte lógico seguro de dados quando não mais necessários." },
+            { id: 100, item: "8.11", cat: "A.8", name: "Mascaramento de dados", desc: "Anonimização e mascaramento de dados sensíveis/pessoais." },
+            { id: 101, item: "8.12", cat: "A.8", name: "Prevenção de vazamento de dados (DLP)", desc: "Sistemas para evitar exfiltração não autorizada de informações." },
+            { id: 102, item: "8.13", cat: "A.8", name: "Backup das informações", desc: "Cópias de segurança executadas e testadas periodicamente." },
+            { id: 103, item: "8.14", cat: "A.8", name: "Redundância dos recursos de TI", desc: "Alta disponibilidade e redundância de servidores/links." },
+            { id: 104, item: "8.15", cat: "A.8", name: "Log e auditoria", desc: "Registros de eventos de segurança mantidos, protegidos e analisados." },
+            { id: 105, item: "8.16", cat: "A.8", name: "Atividades de monitoramento", desc: "Monitoramento em tempo real de comportamento anômalo em rede/sistemas." },
+            { id: 106, item: "8.17", cat: "A.8", name: "Sincronização do relógio (NTP)", desc: "Relógios de todos os ativos sincronizados com fonte oficial." },
+            { id: 107, item: "8.18", cat: "A.8", name: "Uso de programas utilitários privilegiados", desc: "Ferramentas que contornam controles restritas ao máximo." },
+            { id: 108, item: "8.19", cat: "A.8", name: "Instalação de software em produção", desc: "Restrição de instalação de softwares não homologados pelos usuários." },
+            { id: 109, item: "8.20", cat: "A.8", name: "Segurança de redes", desc: "Firewalls, switches gerenciáveis e proteção de borda." },
+            { id: 110, item: "8.21", cat: "A.8", name: "Segurança dos serviços de rede", desc: "Acordos e níveis de segurança para serviços de telecom e links." },
+            { id: 111, item: "8.22", cat: "A.8", name: "Segregação de redes (VLANs)", desc: "Segmentação de rede entre ambientes corporativos, visitantes e servidores." },
+            { id: 112, item: "8.23", cat: "A.8", name: "Filtragem da web", desc: "Filtro de conteúdo e bloqueio de sites maliciosos." },
+            { id: 113, item: "8.24", cat: "A.8", name: "Uso de criptografia", desc: "Criptografia forte em trânsito (TLS) e em repouso (AES)." },
+            { id: 114, item: "8.25", cat: "A.8", name: "Ciclo de vida de desenvolvimento seguro (SSDLC)", desc: "Regras de segurança incorporadas ao desenvolvimento de software." },
+            { id: 115, item: "8.26", cat: "A.8", name: "Requisitos de segurança da aplicação", desc: "Requisitos de SI levantados na contratação/desenvolvimento de apps." },
+            { id: 116, item: "8.27", cat: "A.8", name: "Engenharia de sistemas seguros", desc: "Princípios de arquitetura segura mantidos." },
+            { id: 117, item: "8.28", cat: "A.8", name: "Codificação segura", desc: "Práticas de Secure Coding (OWASP) aplicadas pelos devs." },
+            { id: 118, item: "8.29", cat: "A.8", name: "Testes de segurança em desenvolvimento", desc: "SAST/DAST e testes de invasão antes do go-live." },
+            { id: 119, item: "8.30", cat: "A.8", name: "Desenvolvimento terceirizado", desc: "Supervisão e auditoria sobre fábricas de software contratadas." },
+            { id: 120, item: "8.31", cat: "A.8", name: "Separação de ambientes (Dev/Homolog/Prod)", desc: "Isolamento estrito entre desenvolvimento, testes e produção." },
+            { id: 121, item: "8.32", cat: "A.8", name: "Gestão de mudanças", desc: "Mudanças operacionais e de código submetidas a homologação formal." },
+            { id: 122, item: "8.33", cat: "A.8", name: "Informações de teste", desc: "Proteção contra o uso de dados reais de produção em testes." },
+            { id: 123, item: "8.34", cat: "A.8", name: "Proteção durante testes de auditoria", desc: "Planejamento para evitar impactos operacionais durante testes de auditoria." }
+        ];
+
+        // STATE APP OBJECT
+        let auditState = {
+            identificacao: {
+                organizacao: "AF Datalink",
+                norma: "ABNT NBR ISO/IEC 27001:2022 – Sistemas de Gestão da Segurança da Informação",
+                tipo: "1a_parte",
+                dataInicio: new Date().toISOString().split('T')[0],
+                dataFim: new Date().toISOString().split('T')[0],
+                escopo: "Sistemas de Tecnologia da Informação, Infraestrutura e Processos de Negócio do SGSI da AF Datalink.",
+                objetivo: "Verificar a conformidade do SGSI da AF Datalink com os requisitos das Seções 4 a 10 e com os controles do Anexo A da ABNT NBR ISO/IEC 27001:2022, e avaliar sua implementação e eficácia.",
+                criterios: "ABNT NBR ISO/IEC 27001:2022; política, procedimentos e demais documentos do SGSI da AF Datalink; requisitos legais e contratuais.",
+                auditorLider: "Auditor Sênior SGSI",
+                equipe: "Equipe de Auditoria Interna / Segurança da Informação",
+                auditados: "Gestão de TI, Segurança da Informação, RH, Jurídico e Operações"
+            },
+            requisitos: {}, // Key: ID (1..30) -> { evid: "", obs: "", status: "PENDING" }
+            anexoA: {},     // Key: ID (31..123) -> { evid: "", obs: "", status: "PENDING" }
+            rncs: [],       // Array of RNC Objects
+            relatorio: {
+                pontosFortes: "",
+                principaisRiscos: "",
+                recomendacoes: ""
+            }
+        };
+
+        // Charts instances
+        let chartReq = null;
+        let chartAnexo = null;
+
+        // INITIALIZATION
+        window.onload = function() {
+            loadFromLocalStorage();
+            syncIdentificacaoInputs();
+            renderRequisitosTable();
+            renderAnexoATable();
+            renderRncsList();
+            initCharts();
+            updateGlobalStats();
+            setupEventListeners();
+        };
+
+        // SAVE & LOAD LOCAL STORAGE
+        function saveToLocalStorage() {
+            readIdentificacaoInputs();
+            readRelatorioInputs();
+            localStorage.setItem("af_datalink_audit_iso27001", JSON.stringify(auditState));
+        }
+
+        function loadFromLocalStorage() {
+            const saved = localStorage.getItem("af_datalink_audit_iso27001");
+            if (saved) {
+                try {
+                    auditState = JSON.parse(saved);
+                } catch (e) {
+                    console.error("Erro ao carregar do LocalStorage", e);
+                }
+            } else {
+                // Initialize empty entries for requirements
+                REQUISITOS_DATA.forEach(r => {
+                    if (!auditState.requisitos[r.id]) {
+                        auditState.requisitos[r.id] = { evid: "", obs: "", status: "" };
+                    }
+                });
+                ANEXOA_DATA.forEach(a => {
+                    if (!auditState.anexoA[a.id]) {
+                        auditState.anexoA[a.id] = { evid: "", obs: "", status: "" };
+                    }
+                });
+            }
+        }
+
+        // NAVIGATION TABS
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+            document.getElementById(tabId).classList.remove('hidden');
+            document.getElementById('btn-' + tabId).classList.add('active');
+
+            if (tabId === 'tab-dashboard') {
+                updateGlobalStats();
+            } else if (tabId === 'tab-relatorio') {
+                updateRelatorioView();
+            }
+        }
+
+        // IDENTIFICATION TAB BINDINGS
+        function syncIdentificacaoInputs() {
+            const idData = auditState.identificacao;
+            if (!idData) return;
+            document.getElementById('ident-organizacao').value = idData.organizacao || "";
+            document.getElementById('ident-norma').value = idData.norma || "";
+            document.getElementById('ident-tipo').value = idData.tipo || "1a_parte";
+            document.getElementById('ident-data-inicio').value = idData.dataInicio || "";
+            document.getElementById('ident-data-fim').value = idData.dataFim || "";
+            document.getElementById('ident-escopo').value = idData.escopo || "";
+            document.getElementById('ident-objetivo').value = idData.objetivo || "";
+            document.getElementById('ident-criterios').value = idData.criterios || "";
+            document.getElementById('ident-auditor-lider').value = idData.auditorLider || "";
+            document.getElementById('ident-equipe').value = idData.equipe || "";
+            document.getElementById('ident-auditados').value = idData.auditados || "";
+        }
+
+        function readIdentificacaoInputs() {
+            auditState.identificacao = {
+                organizacao: document.getElementById('ident-organizacao').value,
+                norma: document.getElementById('ident-norma').value,
+                tipo: document.getElementById('ident-tipo').value,
+                dataInicio: document.getElementById('ident-data-inicio').value,
+                dataFim: document.getElementById('ident-data-fim').value,
+                escopo: document.getElementById('ident-escopo').value,
+                objetivo: document.getElementById('ident-objetivo').value,
+                criterios: document.getElementById('ident-criterios').value,
+                auditorLider: document.getElementById('ident-auditor-lider').value,
+                equipe: document.getElementById('ident-equipe').value,
+                auditados: document.getElementById('ident-auditados').value
+            };
+        }
+
+        function readRelatorioInputs() {
+            auditState.relatorio = {
+                pontosFortes: document.getElementById('rpt-pontos-fortes').value,
+                principaisRiscos: document.getElementById('rpt-principais-riscos').value,
+                recomendacoes: document.getElementById('rpt-recomendacoes').value
+            };
+        }
+
+        // RENDER CHECKLIST REQUISITOS (4 A 10)
+        function renderRequisitosTable() {
+            const tbody = document.getElementById('tbody-requisitos');
+            tbody.innerHTML = '';
+
+            let currentSec = '';
+
+            REQUISITOS_DATA.forEach(item => {
+                // Section Header Row
+                if (item.sec !== currentSec) {
+                    currentSec = item.sec;
+                    const secTr = document.createElement('tr');
+                    secTr.className = 'bg-slate-100 font-bold text-slate-800 text-xs uppercase tracking-wide border-y border-slate-200';
+                    secTr.innerHTML = `<td colspan="6" class="p-2.5 px-4 bg-slate-200/70 text-blue-900"><i class="fa-solid fa-folder-open mr-2 text-blue-700"></i>${currentSec}</td>`;
+                    tbody.appendChild(secTr);
+                }
+
+                const saved = auditState.requisitos[item.id] || { evid: "", obs: "", status: "" };
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition border-b border-slate-100 req-row';
+                tr.dataset.id = item.id;
+                tr.dataset.status = saved.status || 'PENDING';
+
+                tr.innerHTML = `
+                    <td class="p-3 text-center text-slate-400 font-mono font-medium">${item.id}</td>
+                    <td class="p-3 text-center font-bold text-blue-700 font-mono">${item.item}</td>
+                    <td class="p-3 text-slate-800 font-medium leading-relaxed">${item.req}</td>
+                    <td class="p-2">
+                        <textarea onchange="updateReqValue(${item.id}, 'evid', this.value)" rows="2" class="w-full text-xs p-2 border border-slate-300 rounded bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500" placeholder="Registros, relatórios, nomes de documentos, entrevistas...">${saved.evid || ''}</textarea>
+                    </td>
+                    <td class="p-2">
+                        <textarea onchange="updateReqValue(${item.id}, 'obs', this.value)" rows="2" class="w-full text-xs p-2 border border-slate-300 rounded bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500" placeholder="Achados do auditor, pontos observados, RNC nº...">${saved.obs || ''}</textarea>
+                    </td>
+                    <td class="p-2 text-center">
+                        <select onchange="updateReqValue(${item.id}, 'status', this.value)" class="text-xs font-bold p-2 border border-slate-300 rounded-lg w-full ${getStatusBgColor(saved.status)} transition">
+                            <option value="" ${!saved.status ? 'selected' : ''}>-- Selecionar --</option>
+                            <option value="C" ${saved.status === 'C' ? 'selected' : ''}>C (Conforme)</option>
+                            <option value="NC" ${saved.status === 'NC' ? 'selected' : ''}>NC (Não Conf.)</option>
+                            <option value="OM" ${saved.status === 'OM' ? 'selected' : ''}>OM (Op. Melh.)</option>
+                        </select>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // RENDER CHECKLIST ANEXO A
+        function renderAnexoATable() {
+            const tbody = document.getElementById('tbody-anexoa');
+            tbody.innerHTML = '';
+
+            let currentCat = '';
+
+            const catMapNames = {
+                "A.5": "A.5 — Controles Organizacionais (37 Controles)",
+                "A.6": "A.6 — Controles de Pessoas (8 Controles)",
+                "A.7": "A.7 — Controles Físicos (14 Controles)",
+                "A.8": "A.8 — Controles Tecnológicos (34 Controles)"
+            };
+
+            ANEXOA_DATA.forEach(item => {
+                if (item.cat !== currentCat) {
+                    currentCat = item.cat;
+                    const catTr = document.createElement('tr');
+                    catTr.className = 'bg-slate-100 font-bold text-slate-800 text-xs uppercase tracking-wide border-y border-slate-200';
+                    catTr.innerHTML = `<td colspan="6" class="p-2.5 px-4 bg-indigo-100/70 text-indigo-900"><i class="fa-solid fa-layer-group mr-2 text-indigo-700"></i>${catMapNames[currentCat]}</td>`;
+                    tbody.appendChild(catTr);
+                }
+
+                const saved = auditState.anexoA[item.id] || { evid: "", obs: "", status: "" };
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition border-b border-slate-100 anexoa-row';
+                tr.dataset.id = item.id;
+                tr.dataset.cat = item.cat;
+                tr.dataset.status = saved.status || 'PENDING';
+
+                tr.innerHTML = `
+                    <td class="p-3 text-center text-slate-400 font-mono font-medium">${item.id}</td>
+                    <td class="p-3 text-center font-bold text-indigo-700 font-mono">${item.item}</td>
+                    <td class="p-3 text-slate-800">
+                        <span class="font-bold block text-slate-900 mb-0.5">${item.name}</span>
+                        <span class="text-slate-500 text-xs block leading-relaxed">${item.desc}</span>
+                    </td>
+                    <td class="p-2">
+                        <textarea onchange="updateAnexoAValue(${item.id}, 'evid', this.value)" rows="2" class="w-full text-xs p-2 border border-slate-300 rounded bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500" placeholder="Registros de sistemas, evidências, prints, contratos...">${saved.evid || ''}</textarea>
+                    </td>
+                    <td class="p-2">
+                        <textarea onchange="updateAnexoAValue(${item.id}, 'obs', this.value)" rows="2" class="w-full text-xs p-2 border border-slate-300 rounded bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500" placeholder="Justificativa de exclusão SoA (se NA) ou observações...">${saved.obs || ''}</textarea>
+                    </td>
+                    <td class="p-2 text-center">
+                        <select onchange="updateAnexoAValue(${item.id}, 'status', this.value)" class="text-xs font-bold p-2 border border-slate-300 rounded-lg w-full ${getStatusBgColor(saved.status)} transition">
+                            <option value="" ${!saved.status ? 'selected' : ''}>-- Selecionar --</option>
+                            <option value="C" ${saved.status === 'C' ? 'selected' : ''}>C (Conforme)</option>
+                            <option value="NC" ${saved.status === 'NC' ? 'selected' : ''}>NC (Não Conf.)</option>
+                            <option value="OM" ${saved.status === 'OM' ? 'selected' : ''}>OM (Op. Melh.)</option>
+                            <option value="NA" ${saved.status === 'NA' ? 'selected' : ''}>NA (Não Aplic.)</option>
+                        </select>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // UPDATE HELPERS
+        function getStatusBgColor(status) {
+            switch (status) {
+                case 'C': return 'bg-emerald-100 text-emerald-800 border-emerald-300';
+                case 'NC': return 'bg-rose-100 text-rose-800 border-rose-300';
+                case 'OM': return 'bg-amber-100 text-amber-800 border-amber-300';
+                case 'NA': return 'bg-slate-200 text-slate-800 border-slate-300';
+                default: return 'bg-slate-50 text-slate-600 border-slate-300';
+            }
+        }
+
+        function updateReqValue(id, field, value) {
+            if (!auditState.requisitos[id]) auditState.requisitos[id] = { evid: "", obs: "", status: "" };
+            auditState.requisitos[id][field] = value;
+            saveToLocalStorage();
+            updateGlobalStats();
+            renderRequisitosTable();
+        }
+
+        function updateAnexoAValue(id, field, value) {
+            if (!auditState.anexoA[id]) auditState.anexoA[id] = { evid: "", obs: "", status: "" };
+            auditState.anexoA[id][field] = value;
+            saveToLocalStorage();
+            updateGlobalStats();
+            renderAnexoATable();
+        }
+
+        // FILTERS
+        function filterReqItems() {
+            const search = document.getElementById('search-req').value.toLowerCase();
+            const statusFilter = document.getElementById('filter-req-status').value;
+
+            document.querySelectorAll('#tbody-requisitos tr.req-row').forEach(tr => {
+                const text = tr.innerText.toLowerCase();
+                const status = tr.dataset.status;
+
+                let matchesSearch = text.includes(search);
+                let matchesStatus = (statusFilter === 'ALL') ||
+                                    (statusFilter === 'PENDING' && (!status || status === 'PENDING')) ||
+                                    (status === statusFilter);
+
+                if (matchesSearch && matchesStatus) {
+                    tr.style.display = '';
+                } else {
+                    tr.style.display = 'none';
+                }
+            });
+        }
+
+        function filterAnexoAItems() {
+            const catFilter = document.getElementById('filter-anexoa-cat').value;
+            const statusFilter = document.getElementById('filter-anexoa-status').value;
+
+            document.querySelectorAll('#tbody-anexoa tr.anexoa-row').forEach(tr => {
+                const cat = tr.dataset.cat;
+                const status = tr.dataset.status;
+
+                let matchesCat = (catFilter === 'ALL') || (cat === catFilter);
+                let matchesStatus = (statusFilter === 'ALL') ||
+                                    (statusFilter === 'PENDING' && (!status || status === 'PENDING')) ||
+                                    (status === statusFilter);
+
+                if (matchesCat && matchesStatus) {
+                    tr.style.display = '';
+                } else {
+                    tr.style.display = 'none';
+                }
+            });
+        }
+
+        // RNC MANAGEMENT
+        function renderRncsList() {
+            const container = document.getElementById('rnc-list-container');
+            container.innerHTML = '';
+
+            const rncs = auditState.rncs || [];
+            document.getElementById('badge-rncs').innerText = rncs.length;
+
+            if (rncs.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                        <i class="fa-solid fa-circle-check text-4xl text-emerald-500 mb-2"></i>
+                        <p class="text-sm font-semibold text-slate-700">Nenhuma Não Conformidade (RNC) registrada</p>
+                        <p class="text-xs text-slate-400 mt-1">Caso identifique desvios durante a auditoria, clique no botão "Nova RNC".</p>
+                    </div>
+                `;
+                return;
+            }
+
+            rncs.forEach((rnc, index) => {
+                const card = document.createElement('div');
+                card.className = 'bg-white p-5 rounded-xl border border-rose-200 shadow-sm space-y-3';
+                card.innerHTML = `
+                    <div class="flex items-center justify-between border-b border-rose-100 pb-2">
+                        <div class="flex items-center space-x-3">
+                            <span class="px-2.5 py-1 bg-rose-100 text-rose-800 font-mono font-bold text-xs rounded">RNC #${rnc.num}</span>
+                            <span class="text-xs font-semibold text-slate-700">Item Norma: <strong class="text-blue-700">${rnc.itemRef || 'N/I'}</strong></span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs text-slate-400"><i class="fa-solid fa-calendar mr-1"></i>${rnc.date || ''}</span>
+                            <button onclick="editRnc(${index})" class="text-slate-400 hover:text-blue-600 text-xs p-1"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="deleteRnc(${index})" class="text-slate-400 hover:text-rose-600 text-xs p-1"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                        <div>
+                            <strong class="text-slate-700 block mb-0.5">Descrição da NC:</strong>
+                            <p class="text-slate-600 bg-slate-50 p-2.5 rounded border border-slate-200">${rnc.desc || 'Sem descrição'}</p>
+                        </div>
+                        <div>
+                            <strong class="text-slate-700 block mb-0.5">Evidências Objetivas:</strong>
+                            <p class="text-slate-600 bg-slate-50 p-2.5 rounded border border-slate-200">${rnc.evid || 'Sem evidências registradas'}</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs bg-rose-50/50 p-3 rounded-lg border border-rose-100">
+                        <div><strong>Causa Raiz:</strong> ${rnc.causa || 'Pendente de análise'}</div>
+                        <div><strong>Responsável:</strong> ${rnc.resp || 'Não definido'}</div>
+                        <div><strong>Prazo Correção:</strong> ${rnc.prazo || 'A definir'}</div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function openNewRncModal() {
+            const rncs = auditState.rncs || [];
+            const nextNum = (rncs.length + 1).toString().padStart(3, '0');
+
+            document.getElementById('rnc-id').value = '';
+            document.getElementById('rnc-num').value = nextNum;
+            document.getElementById('rnc-item-ref').value = '';
+            document.getElementById('rnc-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('rnc-desc').value = '';
+            document.getElementById('rnc-evid').value = '';
+            document.getElementById('rnc-causa').value = '';
+            document.getElementById('rnc-resp').value = '';
+            document.getElementById('rnc-prazo').value = '';
+
+            document.getElementById('modal-rnc-title').innerText = "Registrar Não Conformidade (RNC)";
+            document.getElementById('modal-rnc').classList.remove('hidden');
+        }
+
+        function closeRncModal() {
+            document.getElementById('modal-rnc').classList.add('hidden');
+        }
+
+        function saveRnc() {
+            const idVal = document.getElementById('rnc-id').value;
+            const rncObj = {
+                num: document.getElementById('rnc-num').value,
+                itemRef: document.getElementById('rnc-item-ref').value,
+                date: document.getElementById('rnc-date').value,
+                desc: document.getElementById('rnc-desc').value,
+                evid: document.getElementById('rnc-evid').value,
+                causa: document.getElementById('rnc-causa').value,
+                resp: document.getElementById('rnc-resp').value,
+                prazo: document.getElementById('rnc-prazo').value
+            };
+
+            if (!auditState.rncs) auditState.rncs = [];
+
+            if (idVal !== '') {
+                auditState.rncs[parseInt(idVal)] = rncObj;
+            } else {
+                auditState.rncs.push(rncObj);
+            }
+
+            saveToLocalStorage();
+            renderRncsList();
+            closeRncModal();
+            updateGlobalStats();
+        }
+
+        function editRnc(index) {
+            const rnc = auditState.rncs[index];
+            if (!rnc) return;
+
+            document.getElementById('rnc-id').value = index;
+            document.getElementById('rnc-num').value = rnc.num;
+            document.getElementById('rnc-item-ref').value = rnc.itemRef;
+            document.getElementById('rnc-date').value = rnc.date;
+            document.getElementById('rnc-desc').value = rnc.desc;
+            document.getElementById('rnc-evid').value = rnc.evid;
+            document.getElementById('rnc-causa').value = rnc.causa;
+            document.getElementById('rnc-resp').value = rnc.resp;
+            document.getElementById('rnc-prazo').value = rnc.prazo;
+
+            document.getElementById('modal-rnc-title').innerText = "Editar Não Conformidade (RNC #" + rnc.num + ")";
+            document.getElementById('modal-rnc').classList.remove('hidden');
+        }
+
+        function deleteRnc(index) {
+            if (confirm("Tem certeza que deseja excluir esta RNC?")) {
+                auditState.rncs.splice(index, 1);
+                saveToLocalStorage();
+                renderRncsList();
+                updateGlobalStats();
+            }
+        }
+
+        // STATS & CHARTS UPDATE
+        function updateGlobalStats() {
+            let reqCounts = { C: 0, NC: 0, OM: 0, NA: 0, eval: 0 };
+            let anexoCounts = { C: 0, NC: 0, OM: 0, NA: 0, eval: 0 };
+
+            REQUISITOS_DATA.forEach(r => {
+                const st = auditState.requisitos[r.id]?.status;
+                if (st) {
+                    reqCounts.eval++;
+                    if (reqCounts[st] !== undefined) reqCounts[st]++;
+                }
+            });
+
+            ANEXOA_DATA.forEach(a => {
+                const st = auditState.anexoA[a.id]?.status;
+                if (st) {
+                    anexoCounts.eval++;
+                    if (anexoCounts[st] !== undefined) anexoCounts[st]++;
+                }
+            });
+
+            // Global Totals
+            const totalC = reqCounts.C + anexoCounts.C;
+            const totalNC = reqCounts.NC + anexoCounts.NC;
+            const totalOM = reqCounts.OM + anexoCounts.OM;
+            const totalNA = reqCounts.NA + anexoCounts.NA;
+            const totalEval = reqCounts.eval + anexoCounts.eval;
+            const totalItems = 30 + 93; // 123
+            const pct = Math.round((totalEval / totalItems) * 100);
+
+            // Update Header & KPI Cards
+            document.getElementById('dash-total-progress').innerText = pct + '%';
+            document.getElementById('dash-total-counts').innerText = `${totalEval} de ${totalItems} avaliados`;
+
+            document.getElementById('kpi-c').innerText = totalC;
+            document.getElementById('kpi-nc').innerText = totalNC;
+            document.getElementById('kpi-om').innerText = totalOM;
+            document.getElementById('kpi-na').innerText = totalNA;
+
+            document.getElementById('badge-req').innerText = `${reqCounts.eval}/30`;
+            document.getElementById('badge-anexoa').innerText = `${anexoCounts.eval}/93`;
+
+            document.getElementById('req-progress-badge').innerText = `${reqCounts.eval}/30 Concluídos`;
+            document.getElementById('anexoa-progress-badge').innerText = `${anexoCounts.eval}/93 Concluídos`;
+
+            // Update Charts
+            updateCharts(reqCounts, anexoCounts);
+        }
+
+        function initCharts() {
+            const ctxReq = document.getElementById('chartRequisitos').getContext('2d');
+            const ctxAnexo = document.getElementById('chartAnexoA').getContext('2d');
+
+            chartReq = new Chart(ctxReq, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Conforme (C)', 'Não Conforme (NC)', 'Op. Melhoria (OM)', 'Pendente'],
+                    datasets: [{
+                        data: [0, 0, 0, 30],
+                        backgroundColor: ['#10b981', '#f43f5e', '#f59e0b', '#e2e8f0']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }
+                }
+            });
+
+            chartAnexo = new Chart(ctxAnexo, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Conforme (C)', 'Não Conforme (NC)', 'Op. Melhoria (OM)', 'Não Aplicável (NA)', 'Pendente'],
+                    datasets: [{
+                        data: [0, 0, 0, 0, 93],
+                        backgroundColor: ['#10b981', '#f43f5e', '#f59e0b', '#64748b', '#e2e8f0']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }
+                }
+            });
+        }
+
+        function updateCharts(reqCounts, anexoCounts) {
+            if (!chartReq || !chartAnexo) return;
+
+            const pendingReq = 30 - reqCounts.eval;
+            chartReq.data.datasets[0].data = [reqCounts.C, reqCounts.NC, reqCounts.OM, pendingReq];
+            chartReq.update();
+
+            const pendingAnexo = 93 - anexoCounts.eval;
+            chartAnexo.data.datasets[0].data = [anexoCounts.C, anexoCounts.NC, anexoCounts.OM, anexoCounts.NA, pendingAnexo];
+            chartAnexo.update();
+        }
+
+        // EXECUTIVE REPORT TAB UPDATE
+        function updateRelatorioView() {
+            readIdentificacaoInputs();
+
+            const idData = auditState.identificacao;
+            document.getElementById('rpt-date-str').innerText = `Período da Auditoria: ${idData.dataInicio || '___'} a ${idData.dataFim || '___'}`;
+
+            // Metrics calculation
+            let reqEval = 0, reqC = 0, reqNC = 0, reqOM = 0;
+            REQUISITOS_DATA.forEach(r => {
+                const st = auditState.requisitos[r.id]?.status;
+                if (st) {
+                    reqEval++;
+                    if (st === 'C') reqC++;
+                    if (st === 'NC') reqNC++;
+                    if (st === 'OM') reqOM++;
+                }
+            });
+
+            let anexEval = 0, anexC = 0, anexNC = 0, anexNA = 0;
+            ANEXOA_DATA.forEach(a => {
+                const st = auditState.anexoA[a.id]?.status;
+                if (st) {
+                    anexEval++;
+                    if (st === 'C') anexC++;
+                    if (st === 'NC') anexNC++;
+                    if (st === 'NA') anexNA++;
+                }
+            });
+
+            document.getElementById('rpt-req-eval').innerText = `${reqEval} / 30`;
+            document.getElementById('rpt-req-c').innerText = reqC;
+            document.getElementById('rpt-req-nc').innerText = reqNC;
+            document.getElementById('rpt-req-om').innerText = reqOM;
+
+            document.getElementById('rpt-anexoa-eval').innerText = `${anexEval} / 93`;
+            document.getElementById('rpt-anexoa-c').innerText = anexC;
+            document.getElementById('rpt-anexoa-nc').innerText = anexNC;
+            document.getElementById('rpt-anexoa-na').innerText = anexNA;
+
+            // Fill textareas from state
+            document.getElementById('rpt-pontos-fortes').value = auditState.relatorio?.pontosFortes || '';
+            document.getElementById('rpt-principais-riscos').value = auditState.relatorio?.principaisRiscos || '';
+            document.getElementById('rpt-recomendacoes').value = auditState.relatorio?.recomendacoes || '';
+
+            // Signatures Names
+            document.getElementById('sign-auditor-name').innerText = idData.auditorLider || "Auditor Líder";
+            document.getElementById('sign-auditor-date').innerText = idData.dataFim || "___/___/______";
+
+            document.getElementById('sign-auditado-name').innerText = idData.auditados || "Representante AF Datalink";
+            document.getElementById('sign-auditado-date').innerText = idData.dataFim || "___/___/______";
+        }
+
+        // EVENT LISTENERS & IMPORT/EXPORT
+        function setupEventListeners() {
+            document.getElementById('rpt-pontos-fortes').addEventListener('change', readRelatorioInputs);
+            document.getElementById('rpt-principais-riscos').addEventListener('change', readRelatorioInputs);
+            document.getElementById('rpt-recomendacoes').addEventListener('change', readRelatorioInputs);
+        }
+
+        function exportAuditData() {
+            saveToLocalStorage();
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(auditState, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `Auditoria_SGSI_AF_Datalink_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function triggerImportJSON() {
+            document.getElementById('jsonInput').click();
+        }
+
+        function importAuditData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (imported && imported.identificacao) {
+                        auditState = imported;
+                        saveToLocalStorage();
+                        syncIdentificacaoInputs();
+                        renderRequisitosTable();
+                        renderAnexoATable();
+                        renderRncsList();
+                        updateGlobalStats();
+                        alert("Dados de auditoria importados com sucesso!");
+                    } else {
+                        alert("Arquivo JSON inválido para este formato de auditoria.");
+                    }
+                } catch (err) {
+                    alert("Erro ao ler o arquivo JSON.");
+                }
+            };
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+</html>
